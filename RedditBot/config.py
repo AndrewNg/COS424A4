@@ -1,0 +1,2 @@
+REDDIT_USERNAME = 'COS424'
+REDDIT_PASS = 'imnotabot'
