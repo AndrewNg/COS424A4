@@ -73,7 +73,7 @@ clusters = km.labels_.tolist()
 
 data['clusters'] = clusters
 
-data.to_csv('clustereddata.csv')
+# data.to_csv('clustereddata_pics.csv')
 
 print(data['clusters'].value_counts())
 
