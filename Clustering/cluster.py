@@ -11,7 +11,7 @@ from sklearn.cluster import KMeans
 from sklearn.externals import joblib
 import hdbscan
 
-data = pd.read_csv("../data/over20data.csv")
+data = pd.read_csv("../data/finalnbadata.csv")
 
 from nltk.stem.snowball import SnowballStemmer
 stemmer = SnowballStemmer("english")
@@ -37,17 +37,17 @@ def tokenize_only(text):
           filtered_tokens.append(token)
   return filtered_tokens
 
-# let's only do the NBA subreddit for now
-data = data.loc[data['link'].str.contains('http://reddit.com/r/nba')]
+# titles = data['title']
 
-titles = data['title']
-
-new_titles = []
+# new_titles = []
 
 # # iterate through all of the titles and stem and tokenize them
 # for title in titles:
-#   new_title = tokenize_and_stem(title)
+#   new_title = tokenize_and_stem(str(title))
 #   new_titles.append(new_title)
+
+# Filter data where not nan
+data = data[pd.notnull(data['title'])]
 
 # bag of words is not appropriate as there are a lot of "a, the, etc."
 # so we use tfidf which accounts for document frequency
@@ -61,7 +61,11 @@ vectors = tfidf_vectorizer.fit_transform(data['title'])
 
 terms = tfidf_vectorizer.get_feature_names()
 
-num_clusters = 10
+# also have vectorizer for bag of words
+bow_vectorizer = feature_extraction.text.CountVectorizer(max_features=200000,
+                                 stop_words='english', tokenizer=tokenize_and_stem, ngram_range=(1,3))
+
+num_clusters = 32
 km = KMeans(n_clusters=num_clusters)
 
 km.fit(vectors)
@@ -73,7 +77,7 @@ clusters = km.labels_.tolist()
 
 data['clusters'] = clusters
 
-# data.to_csv('clustereddata_pics.csv')
+data.to_csv('clustereddata.csv')
 
 print(data['clusters'].value_counts())
 
