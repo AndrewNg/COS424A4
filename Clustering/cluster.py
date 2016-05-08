@@ -10,8 +10,16 @@ import mpld3
 from sklearn.cluster import KMeans
 from sklearn.externals import joblib
 import hdbscan
+import matplotlib.pyplot as plt
+import matplotlib as mpl
+from sklearn.metrics.pairwise import cosine_similarity
 
-data = pd.read_csv("../data/over20data.csv")
+from sklearn import manifold
+
+# from sklearn.manifold import MDS
+# MDS()
+
+# data = pd.read_csv("../data/finalnbadata.csv")
 
 from nltk.stem.snowball import SnowballStemmer
 stemmer = SnowballStemmer("english")
@@ -37,20 +45,22 @@ def tokenize_only(text):
           filtered_tokens.append(token)
   return filtered_tokens
 
-# let's only do the NBA subreddit for now
-data = data.loc[data['link'].str.contains('http://reddit.com/r/nba')]
+# titles = data['title']
 
-titles = data['title']
-
-new_titles = []
+# new_titles = []
 
 # # iterate through all of the titles and stem and tokenize them
 # for title in titles:
-#   new_title = tokenize_and_stem(title)
+#   new_title = tokenize_and_stem(str(title))
 #   new_titles.append(new_title)
+
 
 # bag of words is not appropriate as there are a lot of "a, the, etc."
 # so we use tfidf which accounts for document frequency
+
+data = pd.read_csv('../data/clustereddata.csv')
+
+data = data.sample(frac=0.001, replace=False)
 
 #define vectorizer parameters
 tfidf_vectorizer = feature_extraction.text.TfidfVectorizer(max_features=200000,
@@ -59,7 +69,13 @@ tfidf_vectorizer = feature_extraction.text.TfidfVectorizer(max_features=200000,
 
 vectors = tfidf_vectorizer.fit_transform(data['title'])
 
+dist = 1 - cosine_similarity(vectors)
+
 terms = tfidf_vectorizer.get_feature_names()
+
+# # also have vectorizer for bag of words
+# bow_vectorizer = feature_extraction.text.CountVectorizer(max_features=200000,
+#                                  stop_words='english', tokenizer=tokenize_and_stem, ngram_range=(1,3))
 
 num_clusters = 10
 km = KMeans(n_clusters=num_clusters)
@@ -68,12 +84,14 @@ km.fit(vectors)
 
 clusters = km.labels_.tolist()
 
-# clusterer = hdbscan.HDBSCAN(min_cluster_size=10)
-# clusters = clusterer.fit_predict(vectors)
+# # clusterer = hdbscan.HDBSCAN(min_cluster_size=10)
+# # clusters = clusterer.fit_predict(vectors)
 
-data['clusters'] = clusters
+# data['clusters'] = clusters
 
-# data.to_csv('clustereddata_pics.csv')
+# data.to_csv('clustereddata.csv')
+
+clusters = data['clusters']
 
 print(data['clusters'].value_counts())
 
@@ -90,5 +108,29 @@ for i in range(num_clusters):
     print() #add whitespace
 print()
 print()
+
+# convert two components as we're plotting points in a two-dimensional plane
+# "precomputed" because we provide a distance matrix
+# we will also specify `random_state` so the plot is reproducible.
+tsne = manifold.TSNE(n_components=2, init='pca', random_state=0)
+
+pos = tsne.fit_transform(dist)  # shape (n_components, n_samples)
+
+xs, ys = pos[:, 0], pos[:, 1]
+print()
+print()
+
+df = pd.DataFrame(dict(x=xs, y=ys, label=clusters))
+
+groups = df.groupby('label')
+
+# Plot
+fig, ax = plt.subplots()
+ax.margins(0.05) # Optional, just adds 5% padding to the autoscaling
+for name, group in groups:
+    ax.plot(group.x, group.y, marker='o', linestyle='', ms=12, label=name)
+ax.legend()
+
+plt.show()
 
 
